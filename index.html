@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0A1120">
+<meta name="version" content="V1.1-261015-KSEM2X-Hub">
 <meta name="release-date" content="261015">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="K무한매수">
@@ -15,11 +16,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  /* 레이아웃: 한 열 — 종목 카드 2장 → 앱 설치 → 안내. 폰 한 화면에 모두 보이도록 */
+  /* 레이아웃: 한 열 — 시세 자동 갱신 상태 → 종목 카드 2장 → 앱 설치 → 안내. 폰 한 화면에 모두 보이도록 */
   :root{
     --bg:#0A1120; --panel:#0F182A; --panel-2:#0B1322; --border:#1C2842;
     --text:#E6ECF5; --text-dim:#8E9AB0; --text-faint:#5F6B82;
-    --glow:#5EEAD4; --amber:#F5A524; --violet:#A78BFA;
+    --glow:#5EEAD4; --amber:#F5A524; --violet:#A78BFA; --up:#38D98C; --down:#F0475A;
     --f-body:'Noto Sans KR',system-ui,-apple-system,sans-serif;
     --f-mono:'JetBrains Mono',ui-monospace,monospace;
     color-scheme:dark;
@@ -32,6 +33,15 @@
   header p{margin:4px 0 0;font-size:12.5px;color:var(--text-dim);}
   header .ver{font-family:var(--f-mono);color:var(--text-faint);}
   .app-pill{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:700;color:var(--glow);border:1px solid rgba(94,234,212,0.4);}
+  /* 🔄 시세 자동 갱신 상태 (GitHub Actions 수집기가 data/kodex.json 을 갱신한 시각) */
+  .feed{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);
+    font-size:12.5px;line-height:1.5;color:var(--text-dim);font-variant-numeric:tabular-nums;}
+  .feed b{color:var(--text);font-family:var(--f-mono);font-weight:700;}
+  .feed .dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--text-faint);}
+  .feed.ok .dot{background:var(--up);box-shadow:0 0 0 3px rgba(56,217,140,0.18);}
+  .feed.stale .dot{background:var(--amber);}
+  .feed.bad .dot{background:var(--down);}
+  .feed.stale,.feed.bad{color:var(--amber);}
   a.dash{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px;border-radius:16px;
     background:var(--panel);border:1px solid var(--border);color:inherit;text-decoration:none;}
   a.dash:active{transform:scale(0.99);}
@@ -71,8 +81,10 @@
 <div class="wrap">
   <header>
     <h1>K무한매수 허브<span class="app-pill" id="appPill" hidden>앱</span></h1>
-    <p>메리츠 자동주문(국내) · K반도체레버리지 · 메리츠 C계좌 <span class="ver">· 허브 V1.0 (261015)</span></p>
+    <p>메리츠 자동주문(국내) · K반도체레버리지 · 메리츠 C계좌 <span class="ver" id="hubVer">· 허브 V1.1 (261015)</span></p>
   </header>
+
+  <div class="feed" id="feed" role="status"><span class="dot"></span><span id="feedTx">시세 자동 갱신 상태 확인 중…</span></div>
 
   <a class="dash" href="api-kr.html" style="--c:#4FA3FF;">
     <span class="tk" style="font-size:20px;">🇰🇷</span>
@@ -101,10 +113,10 @@
     <div class="ins-tip" id="insTip"></div>
   </section>
 
-  <p class="note">매수 기록은 각 화면 💾 백업 탭의 <b>☁️ PC·모바일 동기화</b>를 켜면 PC와 폰이 같은 기록을 씁니다. 이 목록은 이 기기에 마지막으로 맞춰진 기록입니다.</p>
+  <p class="note">시세는 이 저장소의 <b>GitHub Actions 자동 수집기</b>가 평일 15:07 · 15:47 · 18:17(KST)에 갱신합니다 — 폰·PC를 꺼 둬도 계속 돕니다. 매수 기록은 각 화면 💾 백업 탭의 <b>☁️ PC·모바일 동기화</b>를 켜면 PC와 폰이 같은 기록을 씁니다. 위 목록은 이 기기에 마지막으로 맞춰진 기록입니다.</p>
 </div>
 <script>
-const HUB_VERSION = "V1.0", HUB_RELEASE = "261015";
+const HUB_VERSION = "V1.1", HUB_RELEASE = "261015";
 function readJSON(k){ try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
 function realized(tk, won){
   const t = readJSON(tk + "_trades_v1");
@@ -126,6 +138,34 @@ function renderSummary(){
   el("st-kodex", summary(readJSON("kodex_buy_records_v1"), true) + realized("kodex", true));
 }
 renderSummary();
+
+/* 🔄 시세 자동 갱신 상태 — kodex.html 과 같은 두 곳(같은 주소 · raw.githubusercontent.com)을 읽어 더 최근 것을 표시.
+   판정: 평일(KST) 기준 마지막 갱신이 영업시간 2회차 수집 시각보다 오래됐으면 ‘지연’ */
+function feedUrls(){
+  const urls = ["data/kodex.json"];
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/i), repo = location.pathname.split("/").filter(Boolean)[0];
+  if (m && repo) urls.push(`https://raw.githubusercontent.com/${m[1]}/${repo}/main/data/kodex.json`);
+  return urls;
+}
+async function renderFeed(){
+  const box = document.getElementById("feed"), tx = document.getElementById("feedTx");
+  const got = await Promise.all(feedUrls().map(async u => {
+    try { const r = await fetch(u + "?t=" + Date.now(), { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (e) { return null; }
+  }));
+  const ok = got.filter(j => j && j.lev && Array.isArray(j.lev.bars) && j.lev.bars.length).sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+  if (!ok.length) { box.className = "feed bad"; tx.innerHTML = "시세 파일이 아직 없습니다 — GitHub → Actions → <b>KODEX 시세 수집</b> → Run workflow"; return; }
+  const j = ok[0], L = j.lev, last = L.bars[L.bars.length - 1], q = L.quote && L.quote.price;
+  const ageH = (Date.now() - Date.parse(j.updated)) / 3600000;
+  const wd = new Date(Date.now() + 9 * 3600000).getUTCDay();      // KST 요일
+  const limit = (wd === 1) ? 74 : (wd === 0 || wd === 6) ? 66 : 26;  // 월요일은 주말을 건너뛰므로 여유
+  box.className = "feed " + (ageH <= limit ? "ok" : "stale");
+  tx.innerHTML = `🔄 시세 자동 갱신 <b>${j.updated_kst || String(j.updated).slice(0, 16).replace("T", " ")}</b> · 종가 ${last[0].slice(5).replace("-", "/")} <b>${Math.round(last[4]).toLocaleString("ko-KR")}원</b>`
+    + (q ? ` · 현재가 <b>${Math.round(q).toLocaleString("ko-KR")}원</b>` : "")
+    + (ageH > limit ? ` · ⚠ ${Math.floor(ageH)}시간째 갱신 없음 (Actions 확인)` : "")
+    + `<br><span style="color:var(--text-faint)">수집기 ${j.collector || "-"} · 출처 ${String(L.source || "-").replace("naver", "네이버")}</span>`;
+}
+renderFeed();
+
 /* 🔌 메리츠 자동주문: 모드·최근 결과 (동기화 Gist에서 직접 — 모든 기기 공통) */
 (function apiStatus(){
   const el = document.getElementById("st-api"); if (!el) return;
@@ -138,7 +178,7 @@ renderSummary();
       const P = n => { try { return g.files[n] ? JSON.parse(g.files[n].content) : null; } catch (e) { return null; } };
       const cfg = P("muhan-bot-kr.json"), st = P("muhan-bot-kr-status.json"); if (!cfg) return;
       const t = st && st.run_at ? new Date(st.run_at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
-      el.innerHTML = `<b>${cfg.mode === "live" ? "⏰ 자동 실전 " + ("15:20") : "⏸ 자동 꺼짐"}</b>` + (st ? ` · 최근 ${t} ${OV[st.overall] || st.overall}` : "");
+      el.innerHTML = `<b>${cfg.mode === "live" ? "⏰ 자동 실전 15:20" : "⏸ 자동 꺼짐"}</b>` + (st ? ` · 최근 ${t} ${OV[st.overall] || st.overall}` : "");
     }).catch(() => {});
 })();
 
@@ -161,7 +201,7 @@ function insRender(){
   }
   if (location.protocol === "file:") {
     st.className = "ins-state warn";
-    st.textContent = "⚠ 파일로 연 상태에서는 설치할 수 없습니다. 온라인 주소(https://아이디.github.io/STOCK/)에서 여세요.";
+    st.textContent = "⚠ 파일로 연 상태에서는 설치할 수 없습니다. 온라인 주소(https://mins0x003.github.io/KSEM2X/)에서 여세요.";
     btn.hidden = true; sA.hidden = sI.hidden = true; return;
   }
   if (IS_IOS) {
@@ -192,8 +232,8 @@ document.getElementById("insBtn").addEventListener("click", async () => {
 insRender();
 
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(() => {});
-window.addEventListener("pageshow", e => { if (e.persisted) renderSummary(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) renderSummary(); });
+window.addEventListener("pageshow", e => { if (e.persisted) { renderSummary(); renderFeed(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { renderSummary(); renderFeed(); } });
 </script>
 </body>
 </html>
