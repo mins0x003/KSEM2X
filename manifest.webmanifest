@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "K무한매수 허브",
+  "short_name": "K무한매수",
+  "description": "K반도체레버리지 무한매수 · 메리츠 자동주문(국내)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A1120",
+  "theme_color": "#0A1120",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
